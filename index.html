@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mice Tool Pro — Ultimate (Mac-style)</title>
+
+<!-- Icons & libs -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<!-- External libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+
+<style>
+/* Mac-style UI */
+:root{
+  --bg:#f3f5f7;
+  --card:#ffffff;
+  --accent:#007aff;
+  --muted:#6b7280;
+  --radius:14px;
+  --shadow:0 8px 30px rgba(22,27,34,0.06);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#0f172a}
+.app-center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px}
+.app{width:1100px;max-width:96vw;background:linear-gradient(180deg,rgba(255,255,255,0.9),#ffffff);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;border:1px solid rgba(16,24,40,0.03)}
+.window-top{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid rgba(16,24,40,0.04);background:linear-gradient(180deg,rgba(255,255,255,0.6),rgba(248,250,252,0.9))}
+.top-left{display:flex;gap:8px;align-items:center}
+.control-dot{width:12px;height:12px;border-radius:50%}
+.dot-red{background:#ff5f57}
+.dot-yellow{background:#ffbd2e}
+.dot-green{background:#28c940}
+.title{flex:1;text-align:center;font-weight:700;color:#111;font-size:15px}
+.top-right{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:14px}
+.container{display:grid;grid-template-columns:260px 1fr;gap:18px;padding:20px}
+@media (max-width:980px){ .container{grid-template-columns:1fr;padding:12px} .sidebar{order:2} .main{order:1} }
+.sidebar{padding:12px;border-right:1px solid rgba(16,24,40,0.03)}
+.tools-list{display:flex;flex-direction:column;gap:10px}
+.tool-item{display:flex;gap:10px;align-items:center;padding:10px;border-radius:10px;cursor:pointer;color:var(--muted);background:transparent;border:none;text-align:left}
+.tool-item:hover{background:rgba(2,6,23,0.03);color:#111}
+.tool-item.active{background:linear-gradient(90deg,var(--accent),#6ea8ff);color:white;box-shadow:0 6px 18px rgba(2,6,23,0.06)}
+.tool-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;flex-shrink:0}
+.tool-name{font-weight:600;font-size:14px}
+.search{margin-bottom:12px}
+.card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 4px 18px rgba(16,24,40,0.04)}
+.controls{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.small{color:var(--muted);font-size:13px}
+.btn{background:var(--accent);color:white;padding:8px 12px;border-radius:8px;border:0;cursor:pointer;font-weight:700}
+.btn.secondary{background:transparent;color:var(--accent);border:1px solid rgba(0,122,255,0.12)}
+.input, textarea, select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(16,24,40,0.06);background:transparent}
+.preview-frame{width:100%;height:380px;border-radius:10px;border:1px solid rgba(16,24,40,0.06)}
+.progress-wrap{height:8px;background:#eef2ff;border-radius:999px;overflow:hidden;margin-top:12px}
+.progress{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#7c3aed);transition:width .25s}
+.footer{padding:12px 20px;border-top:1px solid rgba(16,24,40,0.03);display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px}
+.note{font-size:12px;color:var(--muted)}
+.code{font-family:monospace;background:#f7f8fb;padding:6px;border-radius:6px}
+.center{display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+  <div class="app-center">
+    <div class="app" role="application" aria-label="Mice Tool Pro">
+      <div class="window-top">
+        <div class="top-left">
+          <div class="control-dot dot-red" title="close"></div>
+          <div class="control-dot dot-yellow" title="minimize"></div>
+          <div class="control-dot dot-green" title="maximize"></div>
+        </div>
+        <div class="title">Mice Tool Pro — Ultimate (Mac-style)</div>
+        <div class="top-right small">All local • Camera requires HTTPS</div>
+      </div>
+
+      <div class="container">
+        <aside class="sidebar">
+          <div class="card">
+            <input id="tool-search" class="input" placeholder="Search tools (e.g., pdf, image)" />
+            <div style="height:12px"></div>
+            <div class="tools-list" id="toolsList">
+              <!-- sidebar items (script will populate) -->
+            </div>
+            <div style="height:12px"></div>
+            <div class="small">Tip: Use the left bar to switch tools quickly.</div>
+          </div>
+
+          <div style="height:12px"></div>
+
+          <div class="card">
+            <div class="small" style="font-weight:700">Quick actions</div>
+            <div style="height:8px"></div>
+            <div class="row"><button id="open-image" class="btn">Open Image Tool</button><button id="open-pdf" class="btn secondary">PDF Tools</button></div>
+          </div>
+        </aside>
+
+        <main class="main">
+          <div id="mainCard" class="card" aria-live="polite">
+            <!-- tool content injected here -->
+          </div>
+
+          <div class="progress-wrap"><div id="global-progress" class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"></div></div>
+        </main>
+      </div>
+
+      <div class="footer">
+        <div>&copy; 2025 Mice Tool Pro</div>
+        <div class="note">Built with client-side tools — PDF, Image, Audio & QR utilities</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* -------------- Setup libraries & worker -------------- */
+if(window.pdfjsLib && !pdfjsLib.GlobalWorkerOptions.workerSrc){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
+}
+
+/* Utilities */
+const $ = s => document.querySelector(s);
+const qs = s => Array.from(document.querySelectorAll(s));
+function setProgress(p){ const el = $('#global-progress'); if(!el) return; el.style.width = Math.min(100,Math.max(0,p)) + '%'; if(p===0) setTimeout(()=> el.style.width='0%',300); }
+function downloadBlob(blob, name){ const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000); }
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function activateToolItem(id){
+  qs('.tool-item').forEach(t => t.classList.remove('active'));
+  const el = document.getElementById(id);
+  if(el) el.classList.add('active');
+}
+
+/* -------------- Tool definitions & names -------------- */
+const tools = [
+  { id: 'tool-image', name: 'Image Compressor', icon: 'fas fa-image', fn: renderImageCompressor },
+  { id: 'tool-imgconvert', name: 'Image Format Converter', icon: 'fas fa-file-image' , fn: renderImageFormatConverter },
+  { id: 'tool-pdfcompress', name: 'PDF Compressor', icon: 'fas fa-file-pdf', fn: renderPdfCompressor },
+  { id: 'tool-merge', name: 'Merge PDFs', icon: 'fas fa-copy', fn: renderMergePdfs },
+  { id: 'tool-split', name: 'Split PDF', icon: 'fas fa-cut', fn: renderSplitPdf },
+  { id: 'tool-unlock', name: 'Unlock PDF', icon: 'fas fa-unlock', fn: renderUnlockPdf },
+  { id: 'tool-textpdf', name: 'Text → PDF', icon: 'fas fa-file-alt', fn: renderTextToPdf },
+  { id: 'tool-wordpdf', name: 'Word → PDF', icon: 'fas fa-file-word', fn: renderWordToPdf },
+  { id: 'tool-excelpdf', name: 'Excel → PDF', icon: 'fas fa-file-excel', fn: renderExcelToPdf },
+  { id: 'tool-htmlpdf', name: 'HTML → PDF', icon: 'fas fa-code', fn: renderHtmlToPdf },
+  { id: 'tool-htmlpreview', name: 'HTML Previewer', icon: 'fas fa-eye', fn: renderHtmlPreview },
+  { id: 'tool-video', name: 'Video Compressor (simulate)', icon: 'fas fa-video', fn: renderVideoCompressor },
+  { id: 'tool-audio', name: 'Audio Trimmer', icon: 'fas fa-music', fn: renderAudioTrimmer },
+  { id: 'tool-qrgen', name: 'QR Generator', icon: 'fas fa-qrcode', fn: renderQrGenerator },
+  { id: 'tool-qrcam', name: 'QR Scanner', icon: 'fas fa-camera', fn: renderQrScanner },
+  { id: 'tool-textcase', name: 'Text Case Converter', icon: 'fas fa-text-height', fn: renderTextCaseConverter },
+];
+
+/* Populate sidebar */
+const toolsList = $('#toolsList');
+tools.forEach(t=>{
+  const btn = document.createElement('button');
+  btn.id = t.id;
+  btn.className = 'tool-item' + (t.id === 'tool-image' ? ' active' : '');
+  btn.innerHTML = `<div class="tool-icon"><i class="${t.icon}"></i></div><div><div class="tool-name">${t.name}</div><div class="small">${t.name}</div></div>`;
+  btn.addEventListener('click', ()=> { activateToolItem(t.id); t.fn(); });
+  toolsList.appendChild(btn);
+});
+
+/* Quick actions */
+$('#open-image').addEventListener('click', ()=> { activateToolItem('tool-image'); renderImageCompressor(); });
+$('#open-pdf').addEventListener('click', ()=> { activateToolItem('tool-pdfcompress'); renderPdfCompressor(); });
+
+/* Search */
+$('#tool-search').addEventListener('input', (e)=>{
+  const q = e.target.value.trim().toLowerCase();
+  tools.forEach(t=>{
+    const el = document.getElementById(t.id);
+    if(!el) return;
+    el.style.display = (!q || t.name.toLowerCase().includes(q)) ? 'flex' : 'none';
+  });
+});
+
+/* On load: show first tool */
+function showInitial(){ renderImageCompressor(); }
+showInitial();
+
+/* -------------------------
+   Tool implementations
+   ------------------------- */
+
+/* Helper: stop QR camera */
+let html5QrInstance = null;
+function stopQr(){ if(html5QrInstance){ html5QrInstance.stop().catch(()=>{}); try{ html5QrInstance.clear(); }catch(e){} html5QrInstance = null; } }
+
+/* ---------- 1. Image Compressor ---------- */
+async function renderImageCompressor(){
+  stopQr();
+  activateToolItem('tool-image');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>🖼️ Image Compressor</h3>
+    <div class="small">Select JPG/PNG/WebP. Large images will be resized to avoid freezing.</div>
+    <input id="img-file" class="input" type="file" accept="image/*">
+    <label class="small">Quality: <span id="img-q-label">80%</span></label>
+    <input id="img-quality" type="range" min="10" max="100" value="80">
+    <div style="height:8px"></div>
+    <div class="row"><button id="img-process" class="btn">Process</button><button id="img-download" class="btn secondary">Download</button></div>
+    <div id="img-preview" style="margin-top:12px;display:none"></div>
+  `;
+  let processed = null, originalFile = null;
+  $('#img-file').addEventListener('change', e=> { originalFile = e.target.files[0]; processed = null; $('#img-preview').style.display='none'; });
+  $('#img-quality').addEventListener('input', e=> $('#img-q-label').textContent = e.target.value + '%');
+  $('#img-process').addEventListener('click', async ()=>{
+    if(!originalFile) return alert('Select an image');
+    setProgress(10);
+    const q = Math.max(0.05, parseInt($('#img-quality').value,10)/100);
+    const dataUrl = await new Promise(r=>{ const fr=new FileReader(); fr.onload = e=>r(e.target.result); fr.readAsDataURL(originalFile); });
+    const img = new Image(); img.src = dataUrl; await new Promise(r=> img.onload = r);
+    let w = img.naturalWidth, h = img.naturalHeight;
+    const maxDim = 2000; const maxSide = Math.max(w,h);
+    if(maxSide > maxDim){ const ratio = maxDim / maxSide; w = Math.round(w*ratio); h = Math.round(h*ratio); }
+    const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+    setProgress(50);
+    await new Promise(res => canvas.toBlob(b => { processed = b; $('#img-preview').innerHTML = `<div class="small">Processed: ${fmtBytes(b.size)}</div><img src="${URL.createObjectURL(b)}" style="max-width:420px;margin-top:8px">`; $('#img-preview').style.display='block'; setProgress(100); setTimeout(()=>setProgress(0),300); res(); }, 'image/jpeg', q));
+  });
+  $('#img-download').addEventListener('click', ()=>{ if(!processed) return alert('Process image first'); downloadBlob(processed, `image_${Date.now()}.jpg`); });
+  function fmtBytes(b){ if(!b) return '—'; if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(2)+' MB'; }
+}
+
+/* ---------- 2. Image Format Converter ---------- */
+function renderImageFormatConverter(){
+  stopQr();
+  activateToolItem('tool-imgconvert');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>🖼️ Image Format Converter</h3>
+    <div class="small">Convert between PNG, JPG and WebP (client-side).</div>
+    <input id="imgconv-file" class="input" type="file" accept="image/*">
+    <label class="small">Convert to:</label>
+    <select id="imgconv-format" class="input"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option></select>
+    <div style="height:8px"></div>
+    <div class="row"><button id="imgconv-run" class="btn">Convert</button><button id="imgconv-dl" class="btn secondary">Download</button></div>
+    <div id="imgconv-preview" style="margin-top:12px"></div>
+  `;
+  let converted = null;
+  $('#imgconv-run').addEventListener('click', ()=>{
+    const f = $('#imgconv-file').files[0]; if(!f) return alert('Select an image');
+    const format = $('#imgconv-format').value;
+    const fr = new FileReader();
+    fr.onload = e => {
+      const img = new Image();
+      img.onload = ()=> {
+        const canvas = document.createElement('canvas'); canvas.width = img.width; canvas.height = img.height;
+        canvas.getContext('2d').drawImage(img,0,0);
+        canvas.toBlob(b=>{
+          converted = b;
+          $('#imgconv-preview').innerHTML = `<div class="small">Converted (${format.split('/')[1]}): ${fmtBytes(b.size)}</div><img src="${URL.createObjectURL(b)}" style="max-width:420px;margin-top:8px">`;
+          setProgress(100); setTimeout(()=>setProgress(0),300);
+        }, format, 0.9);
+      };
+      img.src = e.target.result;
+    };
+    fr.readAsDataURL(f);
+  });
+  $('#imgconv-dl').addEventListener('click', ()=>{ if(!converted) return alert('Convert first'); const ext = $('#imgconv-format').value.split('/')[1]; downloadBlob(converted, `converted.${ext}`); });
+  function fmtBytes(b){ if(!b) return '—'; if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(2)+' MB'; }
+}
+
+/* ---------- 3. PDF Compressor (client-side re-save) ---------- */
+async function renderPdfCompressor(){
+  stopQr();
+  activateToolItem('tool-pdfcompress');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>📄 PDF Compressor</h3>
+    <div class="small">Client-side re-save. For stronger compression use server-side tools.</div>
+    <input id="pdf-file" class="input" type="file" accept="application/pdf">
+    <div style="height:8px"></div>
+    <div class="row"><button id="pdf-run" class="btn">Compress</button></div>
+  `;
+  $('#pdf-run').addEventListener('click', async ()=>{
+    const f = $('#pdf-file').files[0]; if(!f) return alert('Choose a PDF');
+    setProgress(5);
+    try{
+      const buf = await f.arrayBuffer();
+      const { PDFDocument } = PDFLib;
+      const doc = await PDFDocument.load(buf);
+      const out = await doc.save({ useObjectStreams: true });
+      const blob = new Blob([out], { type: 'application/pdf' });
+      downloadBlob(blob, `compressed_${Date.now()}.pdf`);
+      setProgress(100); setTimeout(()=>setProgress(0),300);
+    } catch(e){ console.error(e); alert('Compression failed'); setProgress(0); }
+  });
+}
+
+/* ---------- 4. Merge PDFs ---------- */
+async function renderMergePdfs(){
+  stopQr();
+  activateToolItem('tool-merge');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>📚 Merge PDFs</h3>
+    <div class="small">Select multiple PDFs. Order is preserved as selected.</div>
+    <input id="merge-files" class="input" type="file" accept="application/pdf" multiple>
+    <div style="height:8px"></div>
+    <div class="row"><button id="merge-run" class="btn">Merge</button></div>
+    <div id="merge-info" class="small" style="margin-top:8px"></div>
+  `;
+  $('#merge-run').addEventListener('click', async ()=>{
+    const files = Array.from($('#merge-files').files || []); if(!files.length) return alert('Select PDFs');
+    setProgress(5);
+    try{
+      const { PDFDocument } = PDFLib;
+      const merged = await PDFDocument.create();
+      for(let i=0;i<files.length;i++){
+        const buf = await files[i].arrayBuffer();
+        const pdf = await PDFDocument.load(buf);
+        const pages = await merged.copyPages(pdf, pdf.getPageIndices());
+        pages.forEach(p => merged.addPage(p));
+        setProgress(Math.round(((i+1)/files.length)*85)+5);
+      }
+      const out = await merged.save();
+      const blob = new Blob([out], { type: 'application/pdf' });
+      downloadBlob(blob, `merged_${Date.now()}.pdf`);
+      setProgress(100); setTimeout(()=>setProgress(0),300);
+    } catch(e){ console.error(e); alert('Merge failed'); setProgress(0); }
+  });
+}
+
+/* ---------- 5. Split PDF ---------- */
+async function renderSplitPdf(){
+  stopQr();
+  activateToolItem('tool-split');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>✂️ Split PDF</h3>
+    <div class="small">Enter a page or range (e.g., 2 or 2-4).</div>
+    <input id="split-file" class="input" type="file" accept="application/pdf">
+    <input id="split-range" class="input" type="text" placeholder="1 or 2-4">
+    <div style="height:8px"></div>
+    <div class="row"><button id="split-run" class="btn">Split</button></div>
+  `;
+  $('#split-run').addEventListener('click', async ()=>{
+    const f = $('#split-file').files[0]; if(!f) return alert('Choose PDF');
+    const r = ($('#split-range').value || '').trim(); if(!r) return alert('Enter range');
+    const parse = s => s.includes('-') ? s.split('-').map(x=>parseInt(x,10)) : [parseInt(s,10), parseInt(s,10)];
+    const [start,end] = parse(r);
+    const buf = await f.arrayBuffer();
+    const { PDFDocument } = PDFLib;
+    const src = await PDFDocument.load(buf);
+    const total = src.getPageCount();
+    if(start < 1 || end > total || start > end) return alert(`Invalid range. PDF has ${total} pages`);
+    const out = await PDFDocument.create();
+    const pages = await out.copyPages(src, Array.from({length:end-start+1}, (_,i)=>start-1+i));
+    pages.forEach(p=> out.addPage(p));
+    const blob = new Blob([await out.save()], { type: 'application/pdf' });
+    downloadBlob(blob, `split_${start}-${end}.pdf`);
+    setProgress(100); setTimeout(()=>setProgress(0),300);
+  });
+}
+
+/* ---------- 6. Unlock PDF ---------- */
+async function renderUnlockPdf(){
+  stopQr();
+  activateToolItem('tool-unlock');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>🔓 Unlock PDF</h3>
+    <div class="small">Provide password if needed. Output will be visual PDF (pages as images).</div>
+    <input id="unlock-file" class="input" type="file" accept="application/pdf">
+    <input id="unlock-pass" class="input" type="password" placeholder="Password (if any)">
+    <div style="height:8px"></div>
+    <div class="row"><button id="unlock-run" class="btn">Unlock / Render</button></div>
+  `;
+  $('#unlock-run').addEventListener('click', async ()=>{
+    const f = $('#unlock-file').files[0]; if(!f) return alert('Choose PDF');
+    const pass = $('#unlock-pass').value || undefined;
+    if(!window.pdfjsLib){ alert('pdf.js is required for unlocking.'); return; }
+    setProgress(5);
+    try{
+      const buf = await f.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: buf, password: pass });
+      const pdf = await loadingTask.promise;
+      const { jsPDF } = window.jspdf;
+      const out = new jsPDF({ unit:'pt', format:'a4' });
+      for(let i=1;i<=pdf.numPages;i++){
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        if(i>1) out.addPage();
+        const pw = out.internal.pageSize.getWidth(), ph = out.internal.pageSize.getHeight();
+        const props = out.getImageProperties(imgData);
+        const ratio = props.width / props.height;
+        let drawW = pw, drawH = drawW / ratio;
+        if(drawH > ph){ drawH = ph; drawW = drawH * ratio; }
+        out.addImage(imgData, 'JPEG', (pw-drawW)/2, (ph-drawH)/2, drawW, drawH);
+        setProgress(Math.round((i/pdf.numPages)*90)+5);
+      }
+      const blob = out.output('blob');
+      downloadBlob(blob, `unlocked_${Date.now()}.pdf`);
+      setProgress(100); setTimeout(()=>setProgress(0),300);
+    } catch(e){ console.error(e); alert('Unlock/render failed (wrong password or unsupported encryption).'); setProgress(0); }
+  });
+}
+
+/* ---------- 7. Text → PDF ---------- */
+function renderTextToPdf(){
+  stopQr();
+  activateToolItem('tool-textpdf');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>📝 Text → PDF</h3>
+    <textarea id="text-to-pdf" class="input" rows="10" placeholder="Type or paste text..."></textarea>
+    <div style="height:8px"></div>
+    <div class="row"><button id="text-pdf-run" class="btn">Generate PDF</button></div>
+  `;
+  $('#text-pdf-run').addEventListener('click', ()=>{
+    const t = $('#text-to-pdf').value; if(!t.trim()) return alert('Enter text');
+    setProgress(5);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'a4' });
+    const margin = 40; const pageW = doc.internal.pageSize.getWidth() - margin*2;
+    doc.setFontSize(12);
+    const lines = doc.splitTextToSize(t, pageW);
+    let y = margin;
+    for(const line of lines){
+      if(y > doc.internal.pageSize.getHeight() - margin){ doc.addPage(); y = margin; }
+      doc.text(line, margin, y); y += 16;
+    }
+    downloadBlob(doc.output('blob'), `text_${Date.now()}.pdf`);
+    setProgress(100); setTimeout(()=>setProgress(0),300);
+  });
+}
+
+/* ---------- 8. Word → PDF (mammoth) ---------- */
+function renderWordToPdf(){
+  stopQr();
+  activateToolItem('tool-wordpdf');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>🧾 Word → PDF (.docx)</h3>
+    <div class="small">Mammoth converts .docx to HTML then to PDF; complex docs may vary.</div>
+    <input id="word-file" class="input" type="file" accept=".docx">
+    <div style="height:8px"></div>
+    <div class="row"><button id="word-run" class="btn">Convert</button></div>
+  `;
+  $('#word-run').addEventListener('click', async ()=>{
+    const f = $('#word-file').files[0]; if(!f) return alert('Select .docx');
+    setProgress(5);
+    try{
+      const ab = await f.arrayBuffer();
+      const res = await mammoth.convertToHtml({ arrayBuffer: ab });
+      const html = res.value;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit:'pt', format:'a4' });
+      await doc.html(html, { x:20, y:20, width: doc.internal.pageSize.getWidth()-40 });
+      downloadBlob(doc.output('blob'), `word_${Date.now()}.pdf`);
+      setProgress(100); setTimeout(()=>setProgress(0),300);
+    } catch(e){ console.error(e); alert('Conversion failed'); setProgress(0); }
+  });
+}
+
+/* ---------- 9. Excel → PDF (SheetJS) ---------- */
+function renderExcelToPdf(){
+  stopQr();
+  activateToolItem('tool-excelpdf');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>📊 Excel → PDF</h3>
+    <div class="small">Converts first sheet to a simple table.</div>
+    <input id="excel-file" class="input" type="file" accept=".xls,.xlsx">
+    <div style="height:8px"></div>
+    <div class="row"><button id="excel-run" class="btn">Convert</button></div>
+  `;
+  $('#excel-run').addEventListener('click', async ()=>{
+    const f = $('#excel-file').files[0]; if(!f) return alert('Select Excel');
+    setProgress(5);
+    try{
+      const ab = await f.arrayBuffer();
+      const wb = XLSX.read(ab, { type:'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const arr = XLSX.utils.sheet_to_json(ws, { header:1 });
+      if(!arr.length) return alert('Sheet empty');
+      const head = arr[0].map(x=>x===undefined?'':String(x));
+      const body = arr.slice(1).map(r => r.map(c => c===undefined?'':String(c)));
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit:'pt', format:'a4', orientation:'landscape' });
+      if(doc.autoTable){
+        doc.autoTable({ head:[head], body:body, styles:{ fontSize:9 } });
+        downloadBlob(doc.output('blob'), `excel_${Date.now()}.pdf`);
+      } else {
+        const html = XLSX.utils.sheet_to_html(ws);
+        await doc.html(html, { x:20, y:20, width: doc.internal.pageSize.getWidth()-40 });
+        downloadBlob(doc.output('blob'), `excel_${Date.now()}.pdf`);
+      }
+      setProgress(100); setTimeout(()=>setProgress(0),300);
+    } catch(e){ console.error(e); alert('Excel conversion failed'); setProgress(0); }
+  });
+}
+
+/* ---------- 10. HTML → PDF ---------- */
+function renderHtmlToPdf(){
+  stopQr();
+  activateToolItem('tool-htmlpdf');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>🌐 HTML → PDF</h3>
+    <div class="small">Paste HTML (inline styles supported). jsPDF renders DOM into PDF pages.</div>
+    <textarea id="html-to-pdf" class="input" rows="10" placeholder="<h1>Hello</h1>"></textarea>
+    <div style="height:8px"></div>
+    <div class="row"><button id="htmlpdf-run" class="btn">Convert</button></div>
+  `;
+  $('#htmlpdf-run').addEventListener('click', async ()=>{
+    const html = $('#html-to-pdf').value; if(!html.trim()) return alert('Paste HTML');
+    setProgress(5);
+    try{
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit:'pt', format:'a4' });
+      const container = document.createElement('div'); container.style.width='800px'; container.innerHTML = html;
+      await doc.html(container, { callback: d => { downloadBlob(d.output('blob'), `html_${Date.now()}.pdf`); setProgress(100); setTimeout(()=>setProgress(0),300); }, x:20, y:20, width: doc.internal.pageSize.getWidth()-40 });
+    } catch(e){ console.error(e); alert('HTML → PDF failed'); setProgress(0); }
+  });
+}
+
+/* ---------- 11. HTML Previewer ---------- */
+function renderHtmlPreview(){
+  stopQr();
+  activateToolItem('tool-htmlpreview');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>🧭 HTML Previewer</h3>
+    <div class="small">Type HTML/CSS/JS and preview live in a sandboxed iframe.</div>
+    <div style="height:8px"></div>
+    <div class="row"><button id="preview-update" class="btn">Update preview</button><button id="preview-dl" class="btn secondary">Download .html</button><label style="margin-left:auto" class="small">Auto <input id="preview-auto" type="checkbox" checked></label></div>
+    <textarea id="preview-input" class="input" rows="10"></textarea>
+    <div style="height:8px"></div>
+    <iframe id="preview-frame" class="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+  `;
+  const inp = $('#preview-input'), frame = $('#preview-frame');
+  function update(){ const c = inp.value || '<h3 style="color:#666">No HTML</h3>'; try{ frame.srcdoc = c; } catch(e){ const d = frame.contentDocument || frame.contentWindow.document; d.open(); d.write(c); d.close(); } setProgress(100); setTimeout(()=>setProgress(0),200); }
+  $('#preview-update').addEventListener('click', update);
+  $('#preview-dl').addEventListener('click', ()=>{ const content = $('#preview-input').value || ''; if(!content.trim()) return alert('No HTML to download'); downloadBlob(new Blob([content],{type:'text/html'}), `preview_${Date.now()}.html`); });
+  let t=null;
+  inp.addEventListener('input', ()=>{ if(!$('#preview-auto').checked) return; if(t) clearTimeout(t); t = setTimeout(update, 350); });
+  inp.value = `<!doctype html>\n<html>\n<head><meta charset="utf-8"><title>Preview</title>\n<style>body{font-family:system-ui;padding:18px;color:#222}</style></head>\n<body>\n  <h1>Hello — Preview</h1>\n  <p>Type HTML here.</p>\n</body>\n</html>`;
+  update();
+}
+
+/* ---------- 12. Video Compressor (simulated) ---------- */
+function renderVideoCompressor(){
+  stopQr();
+  activateToolItem('tool-video');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>🎥 Video Compressor (Simulated)</h3>
+    <div class="small">Real FFmpeg in-browser is possible but heavy. This demo simulates compression. Ask to enable full FFmpeg support.</div>
+    <input id="video-file" class="input" type="file" accept="video/*">
+    <div style="height:8px"></div>
+    <div class="row"><button id="video-run" class="btn">Compress (simulate)</button></div>
+    <div id="video-info" class="small" style="margin-top:8px"></div>
+  `;
+  $('#video-run').addEventListener('click', ()=> {
+    const f = $('#video-file').files[0]; if(!f) return alert('Select a video');
+    setProgress(40);
+    $('#video-info').textContent = `Simulating compression for ${f.name}...`;
+    setTimeout(()=>{ setProgress(100); $('#video-info').textContent = `Simulation complete (demo). Enable FFmpeg for real re-encode.`; setTimeout(()=>setProgress(0),400); }, 2200);
+  });
+}
+
+/* ---------- 13. Audio Trimmer (Web Audio API) ---------- */
+function renderAudioTrimmer(){
+  stopQr();
+  activateToolItem('tool-audio');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>🎧 Audio Trimmer</h3>
+    <div class="small">Upload MP3/WAV/OGG. Choose start & end (seconds). Preview selection and download WAV. Implemented with Web Audio API (client-side).</div>
+    <input id="audio-file" class="input" type="file" accept="audio/*">
+    <div style="height:8px"></div>
+    <div class="input-inline"><input id="audio-start" class="input" type="number" step="0.1" placeholder="Start (s)"><input id="audio-end" class="input" type="number" step="0.1" placeholder="End (s)"></div>
+    <div style="height:8px"></div>
+    <div class="row"><button id="audio-preview" class="btn">Preview</button><button id="audio-trim" class="btn secondary">Trim & Download WAV</button></div>
+    <div id="audio-player" style="margin-top:12px"></div>
+    <div id="audio-info" class="small" style="margin-top:8px"></div>
+  `;
+  let audioBuffer = null, audioContext = null, currentUrl = null;
+  $('#audio-file').addEventListener('change', async (e)=>{
+    const f = e.target.files[0]; if(!f) return;
+    setProgress(10);
+    try{
+      if(!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const ab = await f.arrayBuffer();
+      audioBuffer = await audioContext.decodeAudioData(ab.slice(0));
+      $('#audio-info').textContent = `Loaded ${f.name} — duration ${audioBuffer.duration.toFixed(2)} s`;
+      $('#audio-start').value = 0;
+      $('#audio-end').value = audioBuffer.duration.toFixed(2);
+      setProgress(100); setTimeout(()=>setProgress(0),200);
+    } catch(err){ console.error(err); alert('Failed to decode audio'); setProgress(0); }
+  });
+
+  async function createWavBlobSegment(start, end){
+    const sr = audioBuffer.sampleRate;
+    const startSample = Math.floor(start * audioBuffer.sampleRate);
+    const endSample = Math.floor(end * audioBuffer.sampleRate);
+    const length = endSample - startSample;
+    const numCh = audioBuffer.numberOfChannels;
+    const blockAlign = numCh * 2;
+    const buffer = new ArrayBuffer(44 + length * blockAlign);
+    const view = new DataView(buffer);
+    let offset = 0;
+    function writeString(s){ for(let i=0;i<s.length;i++){ view.setUint8(offset++, s.charCodeAt(i)); } }
+    writeString('RIFF'); view.setUint32(offset, 36 + length * blockAlign, true); offset += 4;
+    writeString('WAVE'); writeString('fmt '); view.setUint32(offset, 16, true); offset += 4;
+    view.setUint16(offset, 1, true); offset += 2; // PCM
+    view.setUint16(offset, numCh, true); offset += 2;
+    view.setUint32(offset, sr, true); offset += 4;
+    view.setUint32(offset, sr * blockAlign, true); offset += 4;
+    view.setUint16(offset, blockAlign, true); offset += 2;
+    view.setUint16(offset, 16, true); offset += 2;
+    writeString('data'); view.setUint32(offset, length * blockAlign, true); offset += 4;
+    // write interleaved samples
+    let pos = 44;
+    for(let i=0;i<length;i++){
+      for(let ch=0; ch<numCh; ch++){
+        let sample = audioBuffer.getChannelData(ch)[startSample + i] || 0;
+        sample = Math.max(-1, Math.min(1, sample));
+        const int16 = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        view.setInt16(pos, Math.round(int16), true); pos += 2;
+      }
+    }
+    return new Blob([view], { type: 'audio/wav' });
+  }
+
+  $('#audio-preview').addEventListener('click', async ()=>{
+    const start = parseFloat($('#audio-start').value || 0), end = parseFloat($('#audio-end').value || 0);
+    if(!audioBuffer) return alert('Load an audio file first');
+    if(isNaN(start) || isNaN(end) || end <= start) return alert('Invalid start/end');
+    setProgress(10);
+    try{
+      const blob = await createWavBlobSegment(start, end);
+      if(currentUrl) URL.revokeObjectURL(currentUrl);
+      currentUrl = URL.createObjectURL(blob);
+      $('#audio-player').innerHTML = `<audio controls src="${currentUrl}"></audio>`;
+      setProgress(100); setTimeout(()=>setProgress(0),200);
+    } catch(e){ console.error(e); alert('Preview failed'); setProgress(0); }
+  });
+
+  $('#audio-trim').addEventListener('click', async ()=>{
+    const start = parseFloat($('#audio-start').value || 0), end = parseFloat($('#audio-end').value || 0);
+    if(!audioBuffer) return alert('Load audio first');
+    if(isNaN(start) || isNaN(end) || end <= start) return alert('Invalid start/end');
+    setProgress(10);
+    try{
+      const blob = await createWavBlobSegment(start, end);
+      downloadBlob(blob, `trim_${Math.round(start)}-${Math.round(end)}.wav`);
+      setProgress(100); setTimeout(()=>setProgress(0),200);
+    } catch(e){ console.error(e); alert('Trim failed'); setProgress(0); }
+  });
+}
+
+/* ---------- 14. QR Generator ---------- */
+function renderQrGenerator(){
+  stopQr();
+  activateToolItem('tool-qrgen');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>🔳 QR Generator</h3>
+    <input id="qr-text" class="input" type="text" placeholder="Enter text or URL">
+    <div style="height:8px"></div>
+    <div class="row"><button id="qr-gen" class="btn">Generate</button><button id="qr-dl" class="btn secondary">Download</button></div>
+    <div id="qr-area" style="margin-top:12px"></div>
+  `;
+  $('#qr-gen').addEventListener('click', ()=> {
+    const txt = $('#qr-text').value.trim(); if(!txt) return alert('Enter text/URL');
+    const container = $('#qr-area'); container.innerHTML = '';
+    new QRCode(container, { text: txt, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.H });
+    setProgress(100); setTimeout(()=>setProgress(0),200);
+  });
+  $('#qr-dl').addEventListener('click', ()=> {
+    const c = $('#qr-area'); if(!c.innerHTML.trim()) return alert('Generate QR first');
+    const cvs = c.querySelector('canvas'); if(cvs){ cvs.toBlob(b=>downloadBlob(b, `qr_${Date.now()}.png`)); return; }
+    const img = c.querySelector('img'); if(img && img.src) fetch(img.src).then(r=>r.blob()).then(b=>downloadBlob(b, `qr_${Date.now()}.png`));
+  });
+}
+
+/* ---------- 15. QR Scanner ---------- */
+function renderQrScanner(){
+  activateToolItem('tool-qrcam');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>📷 QR Scanner</h3>
+    <div class="small">Camera requires HTTPS or localhost.</div>
+    <div style="height:8px"></div>
+    <div id="qr-reader" style="width:100%;max-width:480px"></div>
+    <div style="height:8px"></div>
+    <div class="row"><button id="qr-stop" class="btn secondary">Stop</button></div>
+    <div id="qr-result" class="small" style="margin-top:8px;font-weight:700"></div>
+  `;
+  const result = $('#qr-result');
+  try{
+    html5QrInstance = new Html5Qrcode("qr-reader");
+    html5QrInstance.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 },
+      decodedText => { result.textContent = `Scanned: ${decodedText}`; html5QrInstance.stop().catch(()=>{}); },
+      err => { /* ignore per-frame errors */ }
+    ).catch(err => { result.textContent = `Camera error: ${String(err)}`; });
+  } catch(e){ result.textContent = `Scanner init error: ${String(e)}`; }
+  $('#qr-stop').addEventListener('click', ()=>{ stopQr(); $('#qr-result').textContent = 'Scanner stopped'; });
+}
+
+/* ---------- Text Case Converter ---------- */
+function renderTextCaseConverter(){
+  stopQr();
+  activateToolItem('tool-textcase');
+  const main = $('#mainCard');
+  main.innerHTML = `
+    <h3>🔠 Text Case Converter</h3>
+    <textarea id="case-input" class="input" rows="8" placeholder="Enter text..."></textarea>
+    <div style="height:8px"></div>
+    <div class="row">
+      <button id="to-upper" class="btn">UPPERCASE</button>
+      <button id="to-lower" class="btn">lowercase</button>
+      <button id="to-title" class="btn secondary">Title Case</button>
+      <button id="dl-case" class="btn secondary">Download</button>
+    </div>
+    <div style="height:8px"></div>
+    <textarea id="case-output" class="input" rows="8" readonly placeholder="Result..."></textarea>
+  `;
+  let out = '';
+  $('#to-upper').addEventListener('click', ()=>{ const t = $('#case-input').value; if(!t) return alert('Enter text'); out = t.toUpperCase(); $('#case-output').value = out; setProgress(100); setTimeout(()=>setProgress(0),200); });
+  $('#to-lower').addEventListener('click', ()=>{ const t = $('#case-input').value; if(!t) return alert('Enter text'); out = t.toLowerCase(); $('#case-output').value = out; setProgress(100); setTimeout(()=>setProgress(0),200); });
+  $('#to-title').addEventListener('click', ()=>{ const t = $('#case-input').value; if(!t) return alert('Enter text'); out = t.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()); $('#case-output').value = out; setProgress(100); setTimeout(()=>setProgress(0),200); });
+  $('#dl-case').addEventListener('click', ()=>{ if(!$('#case-output').value) return alert('Convert first'); downloadBlob(new Blob([$('#case-output').value], { type: 'text/plain' }), `text_${Date.now()}.txt`); });
+}
+
+/* -------------------------
+   small helpers & init
+   ------------------------- */
+function fmtBytes(b){ if(!b) return '—'; if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(2)+' MB'; }
+
+/* Initialize with Image tool visible */
+renderImageCompressor();
+setProgress(0);
+
+</script>
+</body>
+</html>
